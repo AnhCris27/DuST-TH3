@@ -13,6 +13,7 @@ from torch.nn import CrossEntropyLoss
 
 import logging
 import pickle
+import os
 import argparse
 
 def get_features(model, loader, device):
@@ -57,22 +58,24 @@ if __name__ == "__main__":
     parser.add_argument('--path_video_val', type=str, default='./data/video_val.pkl',
                         help='Path to the video validation data (default: ./data/video_val.pkl')
     
-    parser.add_argument('--path_label_train', type=str, default='./data/label_train.pkl',
-                        help='Path to training label (default: ./data/label_train.pkl')
-    parser.add_argument('--path_label_val', type=str, default='./data/label_val.pkl',
-                        help='Path to validation label (default: ./data/label_val.pkl')
+    parser.add_argument('--path_label_train', type=str, default='./data/video_label_train.pkl' if os.path.exists('./data/video_label_train.pkl') else './data/label_train.pkl',
+                        help='Path to training label (default: ./data/video_label_train.pkl)')
+    parser.add_argument('--path_label_val', type=str, default='./data/video_label_val.pkl' if os.path.exists('./data/video_label_val.pkl') else './data/label_val.pkl',
+                        help='Path to validation label (default: ./data/video_label_val.pkl)')
 
-    
     # Outputs
     parser.add_argument('--outpath', type=str, default='./video_features/',
                         help='where to save features')
     parser.add_argument('--logpath', type=str, default='./logs/',
                         help='where to save logs')
+    parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu',
+                        help='device to use')
 
     args = parser.parse_args()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device)
     outpath = args.outpath
-    
+    os.makedirs(outpath, exist_ok=True)
+    os.makedirs(args.logpath, exist_ok=True)
     
     # Configure logging
     logging.basicConfig(filename=args.logpath+'get_3d_features.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -101,30 +104,27 @@ if __name__ == "__main__":
     label_val = torch.from_numpy(pd.read_pickle(args.path_label_val))
     
     train_dataset = TensorDataset(video_train, label_train)
-    train_loader = DataLoader(train_dataset, batch_size=bsize, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=bsize, shuffle=False)
 
     val_dataset = TensorDataset(video_val, label_val)
     val_loader = DataLoader(val_dataset, batch_size=bsize, shuffle=False)
 
-    
     logging.info('---- Define 3D swin ----')
     print('---- Define 3D swin ----')
 
     model = SwinTransformer3D(num_classes=4,
                               embed_dim = 128,
-                               mlp_ratio=4.0,
-                               patch_norm=True,
-                               patch_size=(2,4,4,),
-                               drop_path_rate=0.1, # stochastic depth rate in the paper
-                               num_heads=[4,8,16,32],
-                               depths = [2,2,18,2],
-                               pretrained='https://download.openmmlab.com/mmaction/v1.0/recognition/swin/swin_base_patch4_window7_224.pth',
-                               pretrained2d=True,
-                               window_size=(8,7,7,))
+                              mlp_ratio=4.0,
+                              patch_norm=True,
+                              patch_size=(2,4,4,),
+                              drop_path_rate=0.1, # stochastic depth rate in the paper
+                              num_heads=[4,8,16,32],
+                              depths = [2,2,18,2],
+                              pretrained=None,
+                              pretrained2d=False,
+                              window_size=(8,7,7,))
 
-
-    model.load_state_dict(torch.load(args.path_3d_model))
-    
+    model.load_state_dict(torch.load(args.path_3d_model, map_location=device))
     model = model.to(device)
     
     logging.info('train loader')

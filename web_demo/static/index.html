@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DUST Studio — Multi-Modal Driving Risk AI (Dual Swin Transformer)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=3.0.0">
+  <!-- Chart.js for high performance multi-modal time series rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- TOP APP HEADER (Fixed 60px) -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+          <polyline points="16 7 22 7 22 13"></polyline>
+        </svg>
+      </div>
+      <div class="brand-title-group">
+        <h1 class="app-title">DUST Studio</h1>
+        <span class="app-subtitle" data-i18n="app_subtitle">Dual Swin Multi-Modal Driving Risk AI</span>
+      </div>
+      <span class="status-pill success">
+        <span class="pulse-dot"></span> <span data-i18n="status_cloud" id="system-status-text">Đám mây 24/7 Sẵn sàng</span>
+      </span>
+      <span class="model-badge" id="header-model-badge">Dual Swin 3D + 1D Fusion</span>
+    </div>
+
+    <div class="header-right">
+      <!-- LANGUAGE SWITCHER (VI / EN) -->
+      <div class="lang-switch" id="lang-switch" role="group" aria-label="Language Selector">
+        <button type="button" class="lang-btn active" data-lang="vi" id="btn-lang-vi" title="Tiếng Việt">VI</button>
+        <span class="lang-divider">|</span>
+        <button type="button" class="lang-btn" data-lang="en" id="btn-lang-en" title="English">EN</button>
+      </div>
+
+      <button class="header-btn" id="btn-open-upload" title="Upload kinematics CSV dataset">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <span data-i18n="upload_btn">Upload CSV</span>
+      </button>
+
+      <button class="icon-btn" id="theme-toggle" title="Toggle Light / Dark mode" aria-label="Toggle Theme">
+        <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+        <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+      </button>
+
+      <div class="user-chip">
+        <div class="user-avatar">Đ</div>
+        <span class="user-name">Đình Anh</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 100VH WORKSPACE COCKPIT (ZERO SCROLL) -->
+  <main class="workspace" id="workspace">
+    
+    <!-- LEFT SIDEBAR: CONTROLLER & KPI METRICS -->
+    <aside class="sidebar" id="sidebar">
+      
+      <!-- SIDEBAR BRAND -->
+      <div class="sidebar-top-heading">
+        <div class="heading-title-row">
+          <div class="heading-brand">
+            <span class="algo-pill">DUST AI STUDIO</span>
+            <h2 data-i18n="side_title">Nhận Diện Rủi Ro Lái Xe</h2>
+          </div>
+          <button class="icon-btn collapse-btn" id="btn-collapse-sidebar" title="Thu gọn thanh điều khiển" aria-label="Collapse sidebar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 1: CÀI ĐẶT PHÂN TÍCH (CONTROLS) -->
+      <section class="algo-pillar-card primary-control-card">
+        <div class="pillar-header-clean">
+          <h3 class="pillar-title-clean" data-i18n="settings_title">Cài Đặt Dự Báo</h3>
+        </div>
+
+        <div class="pillar-body">
+          <div class="side-form-group">
+            <label class="side-label" for="scenario-select" data-i18n="lbl_dataset">Tình huống lái xe / Dữ liệu</label>
+            <select class="side-control" id="scenario-select">
+              <option value="EVENT_Crash_0001" selected>💥 Va Chạm Nặng (Crash #001)</option>
+              <option value="EVENT_Near_Crash_0001">🚨 Suýt Va Chạm (Near-Crash #001)</option>
+              <option value="EVENT_Tire_Strike_0001">⚠️ Cấn Lề / Va Chạm Lốp (Tire-Strike)</option>
+              <option value="EVENT_Normal_Driving_0001">✅ Lái Xe An Toàn (Normal Driving)</option>
+            </select>
+          </div>
+
+          <!-- Lookback Window Selector -->
+          <div class="side-form-group">
+            <div class="label-with-meta">
+              <label class="side-label" data-i18n="lbl_horizon">Thời gian quan sát trước</label>
+              <span class="meta-tag" id="lbl-horizon-steps">51 bước (2.55s)</span>
+            </div>
+            <div class="horizon-pills" id="horizon-pills">
+              <button type="button" class="horizon-pill active" data-len="51">51 bước</button>
+              <button type="button" class="horizon-pill" data-len="30">30 bước</button>
+              <button type="button" class="horizon-pill" data-len="77" data-i18n="horizon_3d">Video 3D</button>
+              <button type="button" class="horizon-pill" data-len="realtime" data-i18n="horizon_realtime">Realtime</button>
+            </div>
+          </div>
+
+          <!-- NÚT CHẠY PHÂN TÍCH DUST AI -->
+          <button class="primary-run-btn hero-cta-btn" id="btn-run-forecast">
+            <div class="btn-spinner" id="btn-spinner" style="display:none;"></div>
+            <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span class="btn-text" id="btn-text" data-i18n="btn_run_forecast">Chạy Dự Báo AI</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- SECTION 2: KẾT QUẢ ĐÁNH GIÁ (KEY KPI TILES) -->
+      <section class="algo-pillar-card results-card">
+        <div class="pillar-header-clean">
+          <h3 class="pillar-title-clean" data-i18n="kpi_title">Hiệu Năng Mô Hình</h3>
+        </div>
+
+        <div class="pillar-body">
+          <div class="kpi-quad-grid">
+            
+            <!-- Card 1: Độ Chính Xác -->
+            <div class="kpi-tile primary-tile" title="Độ chính xác nhận diện của mô hình DUST">
+              <span class="tile-label" data-i18n="kpi_acc_label">Độ Chính Xác</span>
+              <div class="tile-value text-primary" id="val-accuracy">98.65%</div>
+              <span class="tile-caption"><span data-i18n="kpi_mape_prefix">Sai số F1:</span> <strong id="val-mape">0.985</strong></span>
+            </div>
+
+            <!-- Card 2: Bắt Đúng Xu Hướng / Đúng Phân Loại -->
+            <div class="kpi-tile success-tile" title="Mức độ tự tin phân loại rủi ro">
+              <span class="tile-label" data-i18n="kpi_mda_label">Đúng Xu Hướng</span>
+              <div class="tile-value text-success" id="val-mda">96.74%</div>
+              <span class="tile-caption" id="val-class-caption" data-i18n="kpi_mda_caption">Phát hiện va chạm</span>
+            </div>
+
+            <!-- Card 3: So Với 1D Thuần -->
+            <div class="kpi-tile accent-tile" title="Mức độ vượt trội so với chỉ dùng cảm biến 1D">
+              <span class="tile-label" data-i18n="kpi_advantage_label">So Với 1D Thuần</span>
+              <div class="tile-value text-accent" id="val-advantage">+18.4%</div>
+              <span class="tile-caption" data-i18n="kpi_advantage_caption">Nhờ Video Swin 3D</span>
+            </div>
+
+            <!-- Card 4: Độ trễ suy luận / Điểm Rủi Ro -->
+            <div class="kpi-tile" title="Thời gian xử lý mạng nơ-ron">
+              <span class="tile-label" data-i18n="kpi_mae_label">Độ Trễ (Latency)</span>
+              <div class="tile-value-combo">
+                <span id="val-mae">28.4 ms</span>
+              </div>
+              <span class="tile-caption">FPS: <span id="val-rmse">35.2 FPS</span></span>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: CẤU HÌNH NÂNG CAO (GẬP GỌN) -->
+      <details class="algo-pillar-card algo-accordion">
+        <summary class="accordion-summary">
+          <div class="accordion-title-left">
+            <span class="accordion-icon">⚙️</span>
+            <span class="accordion-heading" data-i18n="adv_title">Cấu Hình Nâng Cao</span>
+          </div>
+          <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </summary>
+
+        <div class="accordion-content">
+          <div class="side-form-group">
+            <label class="side-label" for="backbone-select" data-i18n="lbl_teacher">Kiến Trúc Backbone</label>
+            <select class="side-control" id="backbone-select">
+              <option value="dual_swin" selected>Dual Swin (Video 3D + Kinematics 1D)</option>
+              <option value="swin_1d">Swin Transformer 1D Only</option>
+              <option value="video_3d">Video Swin 3D Only</option>
+            </select>
+          </div>
+
+          <div class="side-form-group">
+            <label class="side-label" for="fusion-mode-select" data-i18n="lbl_loss">Cơ Chế Dung Hợp (Fusion)</label>
+            <select class="side-control" id="fusion-mode-select">
+              <option value="cross_attention" selected>Cross-Attention Dynamic Window (DUST)</option>
+              <option value="concat">Feature Concatenation</option>
+              <option value="bilinear">Bilinear Pooling</option>
+            </select>
+          </div>
+
+          <div class="side-form-group">
+            <label class="side-label" for="seq-len-input" data-i18n="lbl_lookback">Cửa Sổ Thời Gian (Sequence Len)</label>
+            <input type="number" class="side-control" id="seq-len-input" value="51" min="10" max="100" step="1">
+          </div>
+
+          <div class="tech-metrics-inline">
+            <div class="tech-metric-item"><span data-i18n="lbl_vit_align">Swin Align:</span> <strong id="val-alignment">98.4%</strong></div>
+            <div class="tech-metric-item">&Lscr;<sub>fusion</sub>: <strong id="val-distill-loss">0.0031</strong> <span id="tag-distill-loss">ATTN</span></div>
+            <div class="tech-metric-item"><span data-i18n="lbl_latency">Thiết bị:</span> <strong id="val-latency">CUDA GPU</strong></div>
+          </div>
+        </div>
+      </details>
+
+    </aside>
+
+    <!-- RIGHT STAGE: MAIN VISUALIZER (Full Viewport Height) -->
+    <section class="stage-pane" id="stage-pane">
+      
+      <!-- STAGE TOOLBAR (TABS + ZOOM + EXPORT) -->
+      <div class="stage-toolbar">
+        <div class="stage-toolbar-left">
+          <button class="expand-btn" id="btn-expand-sidebar" title="Mở rộng thanh điều khiển" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+
+          <!-- STAGE VIEWS SWITCHER -->
+          <nav class="stage-nav-tabs">
+            <button class="stage-tab active" data-view="view-chart" id="tab-btn-chart">
+              <span data-i18n="tab_chart">Đồ Thị Dự Báo</span>
+            </button>
+            <button class="stage-tab" data-view="view-heatmap" id="tab-btn-heatmap">
+              <span data-i18n="tab_distill">Chưng Cất ViT</span>
+            </button>
+            <button class="stage-tab" data-view="view-table" id="tab-btn-table">
+              <span data-i18n="tab_table">Bảng Số Liệu</span>
+            </button>
+            <button class="stage-tab" data-view="view-benchmarks" id="tab-btn-benchmarks">
+              <span data-i18n="tab_benchmarks">So Sánh Đa Khung</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="stage-toolbar-right">
+          <!-- ZOOM PRESETS -->
+          <div class="zoom-btn-group" id="zoom-controls">
+            <button class="zoom-btn" id="zoom-100" data-i18n="zoom_100">100 nến</button>
+            <button class="zoom-btn" id="zoom-300" data-i18n="zoom_300">300 nến</button>
+            <button class="zoom-btn active" id="zoom-horizon" data-i18n="zoom_horizon">Vùng Dự Báo</button>
+            <button class="zoom-btn" id="zoom-all" data-i18n="zoom_all">Tất Cả</button>
+          </div>
+
+          <!-- ACTIONS -->
+          <button class="stage-action-btn" id="btn-save-chart" title="Lưu biểu đồ dưới dạng ảnh PNG">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span data-i18n="btn_png">PNG</span>
+          </button>
+          <button class="stage-action-btn" id="btn-export-csv" title="Tải xuống tệp CSV số liệu">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span data-i18n="btn_csv">CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STREAMLINED SUBBAR: LAYER TOGGLES + COMPACT PIPELINE PILL -->
+      <div class="stage-subbar" id="chart-subbar">
+        <div class="layer-toggles">
+          <label class="layer-toggle-chip" title="Gia tốc ngang (Lateral Acceleration)">
+            <input type="checkbox" id="toggle-accel-x" checked>
+            <span class="chip-indicator dot-orange"></span>
+            <span data-i18n="toggle_gt">Giá Thực Tế</span>
+          </label>
+          <label class="layer-toggle-chip" title="Mức độ rủi ro dự báo từ mô hình DUST">
+            <input type="checkbox" id="toggle-risk-curve" checked>
+            <span class="chip-indicator dot-blue"></span>
+            <span data-i18n="toggle_calf">AI CALF Dự Báo</span>
+          </label>
+          <label class="layer-toggle-chip" title="Gia tốc dọc (Longitudinal Acceleration)">
+            <input type="checkbox" id="toggle-accel-y" checked>
+            <span class="chip-indicator dot-purple"></span>
+            <span data-i18n="toggle_teacher">Định Hướng ViT</span>
+          </label>
+          <label class="layer-toggle-chip" title="Tốc độ xe hoặc mức chuẩn tham chiếu">
+            <input type="checkbox" id="toggle-speed-z">
+            <span class="chip-indicator dot-naive"></span>
+            <span data-i18n="toggle_naive">Mức Tham Chiếu</span>
+          </label>
+          <label class="layer-toggle-chip" title="Vùng an toàn và ngưỡng cảnh báo 60%">
+            <input type="checkbox" id="toggle-confidence" checked>
+            <span class="chip-indicator dot-gray"></span>
+            <span data-i18n="toggle_conf">Vùng An Toàn 95%</span>
+          </label>
+        </div>
+
+        <div class="compact-pipeline-pill" title="Luồng xử lý mô hình DUST Multi-Modal">
+          <span class="pill-dot pulse-dot"></span>
+          <span class="pill-label">DUST AI:</span>
+          <span class="pill-track" id="compact-pipeline-track">Video Swin 3D &rarr; Swin 1D (51 bước)</span>
+        </div>
+      </div>
+
+      <!-- STAGE CONTENT VIEWPORT (100% Height Fill) -->
+      <div class="stage-viewport">
+        
+        <!-- VIEW 1: DUST DUAL MULTI-MODAL DISPLAY (CHART + SYNCED VIDEO) -->
+        <div class="stage-view-panel active" id="view-chart">
+          <div class="chart-canvas-container">
+            <canvas id="forecastChart"></canvas>
+
+            <!-- SLEEK DOCKED VIDEO PREVIEW WIDGET -->
+            <div class="docked-video-card" id="docked-video-card">
+              <div class="docked-video-header">
+                <div class="video-header-left">
+                  <span class="pulse-dot" style="width: 6px; height: 6px; background-color: #ef4444;"></span>
+                  <span class="video-event-title" id="video-event-badge">EVENT_Crash_0001</span>
+                </div>
+                <div class="video-header-right">
+                  <span id="video-frame-indicator" class="frame-tag">1 / 4</span>
+                  <button class="video-min-btn" id="btn-toggle-video-view" title="Ẩn/Hiện Video">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="docked-video-body" id="docked-video-body">
+                <div class="video-img-wrapper">
+                  <img src="/sample_data/EVENT_Crash_0001/frame_1.jpg" alt="Driving Camera Frame" class="video-screen-img" id="driving-screen-img">
+                  <div class="video-res-badge">224×224 RGB • 30 FPS</div>
+                </div>
+
+                <div class="docked-video-controls">
+                  <button class="btn-video-action" id="btn-video-play" title="Phát video đồng bộ">▶</button>
+                  <input type="range" class="video-scrubber" id="video-scrubber" min="0" max="3" value="0" step="1">
+                  <button class="btn-video-action" id="btn-video-reset" title="Khung đầu">⏮</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- LOADING OVERLAY -->
+            <div class="chart-loading-overlay" id="chart-loader" style="display:none;">
+              <div class="spinner-large"></div>
+              <span class="loader-text" data-i18n="loader_executing">Đang suy luận DUST Multi-Modal Cross-Attention...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 2: MULTI-LAYER ATTENTION HEATMAP & TRIPARTITE LOSS -->
+        <div class="stage-view-panel" id="view-heatmap">
+          <div class="panel-scroll-inner">
+            <div class="distill-split-grid">
+              <!-- Left: Layer-wise representation matching bars -->
+              <div class="distill-card">
+                <div class="distill-card-header">
+                  <h3 class="distill-title" data-i18n="distill_title_left">Căn chỉnh Biểu diễn Đa tầng (Swin 3D vs Swin 1D)</h3>
+                  <span class="distill-sub" data-i18n="distill_sub_left">Độ suy giảm theo chiều sâu: &gamma; = 0.8 &bull; 4 Khối Dual Swin</span>
+                </div>
+                <div class="layer-bars-container" id="layer-bars-container">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+
+              <!-- Right: Mathematical formulation of Tripartite Loss -->
+              <div class="distill-card">
+                <div class="distill-card-header">
+                  <h3 class="distill-title" data-i18n="distill_title_right">Mục tiêu Tối ưu Tripartite Loss</h3>
+                  <span class="distill-sub" data-i18n="distill_sub_right">Kết hợp hàm mất mát 3 thành phần trong DUST</span>
+                </div>
+                <div class="math-box">
+                  <code>&Lscr;<sub>total</sub> = w<sub>cls</sub>&Lscr;<sub>cls</sub> + w<sub>fusion</sub>&Lscr;<sub>fusion</sub> + w<sub>aux</sub>&Lscr;<sub>aux</sub></code>
+                </div>
+                <ul class="loss-list">
+                  <li>
+                    <strong class="text-blue">&Lscr;<sub>cls</sub> (<span data-i18n="loss_task_title">Phân Loại Rủi Ro Giám Sát</span>):</strong> <span data-i18n="loss_task_desc">Huấn luyện nhận diện 4 cấp độ rủi ro (Crash, Near Crash, Tire Strike, Safe).</span>
+                  </li>
+                  <li>
+                    <strong class="text-purple">&Lscr;<sub>fusion</sub> (<span data-i18n="loss_logits_title">Đồng Bộ Cross-Attention</span>):</strong> <span data-i18n="loss_logits_desc">Căn chỉnh tương quan không-thời gian giữa khung hình video 3D và chuỗi cảm biến 1D.</span>
+                  </li>
+                  <li>
+                    <strong class="text-amber">&Lscr;<sub>aux</sub> (<span data-i18n="loss_feat_title">Ràng Buộc Biểu Diễn Đơn Nhánh</span>):</strong> <span data-i18n="loss_feat_desc">Khoảng cách suy giảm hàm mũ giữa các tầng ẩn Swin 3D và Swin 1D:</span>
+                    <div class="sub-formula"><code>&sum; (0.8)<sup>4-l</sup> &bull; (1 - cos(h<sub>kine</sub><sup>(l)</sup>, h<sub>video</sub><sup>(l)</sup>))</code></div>
+                  </li>
+                </ul>
+                <div class="active-weights-bar">
+                  <span data-i18n="distill_weights">Trọng số hiện hành: <strong>w<sub>cls</sub>=1.0 &bull; w<sub>fusion</sub>=0.5 &bull; w<sub>aux</sub>=0.2</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 3: STEP-BY-STEP SENSOR TABLE -->
+        <div class="stage-view-panel" id="view-table">
+          <div class="table-pane-wrapper">
+            <div class="table-pane-top">
+              <div class="table-summary-info">
+                <span data-i18n="table_summary">Dữ liệu chi tiết 51 bước cho tình huống:</span> <strong id="lbl-table-var">EVENT_Crash_0001</strong>
+              </div>
+              <div class="table-search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="table-search" placeholder="Tìm theo bước hoặc giá trị..." data-i18n-placeholder="table_search_ph">
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="th_step">Bước #</th>
+                    <th data-i18n="th_time">Thời gian (s)</th>
+                    <th data-i18n="th_gt">Gia Tốc Ngang (X)</th>
+                    <th data-i18n="th_calf">Chỉ Số Rủi Ro (%)</th>
+                    <th data-i18n="th_teacher">Gia Tốc Dọc (Y)</th>
+                    <th data-i18n="th_naive">Tốc Độ Xe (Z)</th>
+                    <th data-i18n="th_abs_err">Tổng Hợp Lực</th>
+                    <th data-i18n="th_pct_err">Mức Độ Cảnh Báo</th>
+                    <th data-i18n="th_status">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="forecast-table-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 4: HORIZON / MULTI-MODEL BENCHMARKS -->
+        <div class="stage-view-panel" id="view-benchmarks">
+          <div class="benchmarks-pane-wrapper">
+            <div class="benchmarks-header">
+              <h3 class="benchmarks-title" data-i18n="benchmarks_title">So Sánh Hiệu Năng Đa Mô Hình (Multi-Modal Benchmarks)</h3>
+              <p class="benchmarks-desc" data-i18n="benchmarks_desc">Kiểm chứng độ vượt trội của hệ thống DUST Dual Swin so với các phương pháp đơn phương thức và đường cơ sở.</p>
+            </div>
+            
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="th_b_horizon">Mô Hình / Phương Pháp</th>
+                    <th data-i18n="th_b_time">Độ Chính Xác</th>
+                    <th>Precision</th>
+                    <th>Recall</th>
+                    <th>F1-Score</th>
+                    <th data-i18n="th_b_mda">Độ Trễ (Latency)</th>
+                    <th data-i18n="th_b_adv">Tốc Độ (FPS)</th>
+                  </tr>
+                </thead>
+                <tbody id="horizon-benchmarks-body">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- UPLOAD MODAL POPUP -->
+  <div class="modal-backdrop" id="upload-modal" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <h3 class="modal-title" data-i18n="modal_title">Upload Custom Time-Series Dataset</h3>
+        </div>
+        <button class="modal-close" id="btn-close-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-desc" data-i18n="modal_desc">Tải lên file chuỗi thời gian cảm biến của bạn (.csv). Các cột dữ liệu gồm gia tốc ngang, gia tốc dọc và tốc độ xe.</p>
+        
+        <div class="drop-zone" id="modal-drop-zone">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m16 16-4-4-4 4"></path></svg>
+          <span class="drop-prompt" data-i18n="drop_prompt">Kéo thả file .csv vào đây</span>
+          <span class="drop-subprompt" data-i18n="drop_subprompt">hoặc bấm để duyệt file từ máy tính</span>
+          <input type="file" id="modal-file-input" accept=".csv" style="display:none;">
+        </div>
+
+        <div class="upload-progress-container" id="upload-progress-bar" style="display:none;">
+          <div class="upload-progress-fill" id="upload-progress-fill" style="width: 0%;"></div>
+        </div>
+
+        <div class="upload-feedback" id="upload-feedback"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-cancel-upload" data-i18n="modal_cancel">Hủy</button>
+        <button class="btn-primary" id="btn-submit-upload" data-i18n="modal_upload" disabled>Tải Lên & Chạy</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=3.0.0"></script>
+</body>
+</html>

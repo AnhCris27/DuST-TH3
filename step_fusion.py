@@ -4,6 +4,7 @@ from models.SwinTransformer_cls import SwinTransformer_1D
 from models.SwinTransformer_fusion import SwinTransformer_1D as SwinTransformer_1D_fusion
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
+import os
 import cv2
 import numpy as np
 import pandas as pd
@@ -26,7 +27,7 @@ def evaluate_test_loss(model, test_loader, criterion, epoch, outpath):
     total = 0
     with torch.no_grad():
         for inputs_1d, labels, vid_feat in test_loader:
-            inputs_1d, labels, vid_feat = inputs_1d.to(device), labels.to(device), vid_feat.to(device)
+            inputs_1d, labels, vid_feat = inputs_1d.to(device), labels.long().to(device), vid_feat.to(device)
 
             outputs = model(inputs_1d, vid_feat)
             test_loss = criterion(outputs, labels)
@@ -65,30 +66,34 @@ if __name__ == "__main__":
                         help='number of channels (default: 3)')
 
     # Inputs
-    parser.add_argument('--path_kine_train', type=str, default='./data/kine_train.pkl',
-                        help='Path to the kine training data (default: ./data/kine_train.pkl')
-    parser.add_argument('--path_kine_val', type=str, default='./data/kine_val.pkl',
-                        help='Path to the kine validation data (default: ./data/kine_val.pkl')
+    parser.add_argument('--path_kine_train', type=str, default='./data/kine_video_train.pkl' if os.path.exists('./data/kine_video_train.pkl') else './data/kine_train.pkl',
+                        help='Path to the kine training data')
+    parser.add_argument('--path_kine_val', type=str, default='./data/kine_video_val.pkl' if os.path.exists('./data/kine_video_val.pkl') else './data/kine_val.pkl',
+                        help='Path to the kine validation data')
 
     parser.add_argument('--path_vidfeat_train', type=str, default='./video_features/train_3d_features.pkl',
-                        help='Path to the training video feature (default: ./video_features/train_3d_features.pkl')
+                        help='Path to the training video feature (default: ./video_features/train_3d_features.pkl)')
     parser.add_argument('--path_vidfeat_val', type=str, default='./video_features/val_3d_features.pkl',
-                        help='Path to the validation video feature (default: ./video_features/val_3d_features.pkl')
+                        help='Path to the validation video feature (default: ./video_features/val_3d_features.pkl)')
     
-    parser.add_argument('--path_label_train', type=str, default='./data/label_train.pkl',
-                        help='Path to training label (default: ./data/label_train.pkl')
-    parser.add_argument('--path_label_val', type=str, default='./data/label_val.pkl',
-                        help='Path to validation label (default: ./data/label_val.pkl')
+    parser.add_argument('--path_label_train', type=str, default='./data/video_label_train.pkl' if os.path.exists('./data/video_label_train.pkl') else './data/label_train.pkl',
+                        help='Path to training label')
+    parser.add_argument('--path_label_val', type=str, default='./data/video_label_val.pkl' if os.path.exists('./data/video_label_val.pkl') else './data/label_val.pkl',
+                        help='Path to validation label')
     
     # Outputs
     parser.add_argument('--outpath', type=str, default='./saved_models/step_fusion/',
                         help='where to save models')
     parser.add_argument('--logpath', type=str, default='./logs/',
                         help='where to save logs')
+    parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu',
+                        help='device to train on')
 
     args = parser.parse_args()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device)
     outpath = args.outpath
+    os.makedirs(outpath, exist_ok=True)
+    os.makedirs(args.logpath, exist_ok=True)
     
     
     # Configure logging
@@ -137,15 +142,14 @@ if __name__ == "__main__":
                                         patch_size=1,
                                         num_heads=[16, 16, 16, 16], 
                                         depths=[2, 2, 6, 2],
-                                        embed_dim=128)
+                                        embed_dim=256)
 
     loaded_state_dict = torch.load(args.path_1d_model)
     partial_state_dict = {key: value for key, value in loaded_state_dict.items() if not key.startswith('head')}
     
     model.load_state_dict(partial_state_dict, strict=False)
     
-    device_id = 0
-    device = torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device)
     model = model.to(device)
 
     num_epochs = args.num_epochs
@@ -171,7 +175,7 @@ if __name__ == "__main__":
 
         for i, (inputs_1d, labels, vid_feat) in enumerate(train_loader, 0):
 
-            inputs_1d, labels, vid_feat = inputs_1d.to(device), labels.to(device), vid_feat.to(device)
+            inputs_1d, labels, vid_feat = inputs_1d.to(device), labels.long().to(device), vid_feat.to(device)
             
             optimizer.zero_grad()
 

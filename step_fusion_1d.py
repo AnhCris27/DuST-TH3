@@ -3,6 +3,7 @@ import torch.nn as nn
 from models.SwinTransformer_cls import SwinTransformer_1D
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
+import os
 import cv2
 import numpy as np
 import pandas as pd
@@ -25,7 +26,7 @@ def evaluate_test_loss(model, test_loader, criterion, epoch, outpath):
     total = 0
     with torch.no_grad():
         for inputs_1d, labels in test_loader:
-            inputs_1d, labels = inputs_1d.to(device), labels.to(device)
+            inputs_1d, labels = inputs_1d.to(device), labels.long().to(device)
 
             outputs = model(inputs_1d)
             test_loss = criterion(outputs, labels)
@@ -77,10 +78,14 @@ if __name__ == "__main__":
                         help='where to save models')
     parser.add_argument('--logpath', type=str, default='./logs/',
                         help='where to save logs')
+    parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu',
+                        help='device to train on')
 
     args = parser.parse_args()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device)
     outpath = args.outpath
+    os.makedirs(outpath, exist_ok=True)
+    os.makedirs(args.logpath, exist_ok=True)
     
     
     # Configure logging
@@ -152,7 +157,7 @@ if __name__ == "__main__":
 
         for i, (inputs_1d, labels) in enumerate(train_loader, 0):
 
-            inputs_1d, labels = inputs_1d.to(device), labels.to(device)
+            inputs_1d, labels = inputs_1d.to(device), labels.long().to(device)
             
             optimizer.zero_grad()
 

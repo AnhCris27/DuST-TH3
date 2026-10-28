@@ -3,6 +3,7 @@ import torch.nn as nn
 from models.video_swin_transformer import SwinTransformer3D
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
+import os
 import cv2
 import numpy as np
 import pandas as pd
@@ -44,7 +45,7 @@ def evaluate_test_loss(model, test_loader, criterion, epoch, outpath):
     total = 0
     with torch.no_grad():
         for inputs_3d, labels in test_loader:
-            inputs_3d, labels = inputs_3d.float().to(device), labels.to(device)
+            inputs_3d, labels = inputs_3d.float().to(device), labels.long().to(device)
 
             outputs = model(inputs_3d)
             test_loss = criterion(outputs, labels)
@@ -90,10 +91,14 @@ if __name__ == "__main__":
     parser.add_argument('--path_video_val', type=str, default='./data/video_val.pkl',
                         help='Path to the video validation data (default: ./data/video_val.pkl')
     
-    parser.add_argument('--path_label_train', type=str, default='./data/label_train.pkl',
-                        help='Path to training label (default: ./data/label_train.pkl')
-    parser.add_argument('--path_label_val', type=str, default='./data/label_val.pkl',
-                        help='Path to validation label (default: ./data/label_val.pkl')
+    parser.add_argument('--path_label_train', type=str, default='./data/video_label_train.pkl' if os.path.exists('./data/video_label_train.pkl') else './data/label_train.pkl',
+                        help='Path to training label (default: ./data/video_label_train.pkl)')
+    parser.add_argument('--path_label_val', type=str, default='./data/video_label_val.pkl' if os.path.exists('./data/video_label_val.pkl') else './data/label_val.pkl',
+                        help='Path to validation label (default: ./data/video_label_val.pkl)')
+    parser.add_argument('--pretrained', type=str, default='./pretrained/swin_base_patch4_window7_224.pth' if os.path.exists('./pretrained/swin_base_patch4_window7_224.pth') else 'https://download.openmmlab.com/mmaction/v1.0/recognition/swin/swin_base_patch4_window7_224.pth',
+                        help='Path to pretrained weights (default: ./pretrained/swin_base_patch4_window7_224.pth)')
+    parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu',
+                        help='device to train on')
     
     # Outputs
     parser.add_argument('--outpath', type=str, default='./saved_models/step_3d/',
@@ -102,13 +107,13 @@ if __name__ == "__main__":
                         help='where to save logs')
 
     args = parser.parse_args()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device)
     outpath = args.outpath
-    
+    os.makedirs(outpath, exist_ok=True)
+    os.makedirs(args.logpath, exist_ok=True)
     
     # Configure logging
     logging.basicConfig(filename=args.logpath+'step_3d.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 
     seed = args.seed
     torch.manual_seed(seed)
@@ -116,7 +121,6 @@ if __name__ == "__main__":
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
-    
     
     logging.info('----- Define Data Loader -----')
     print('----- Define Data Loader -----')
@@ -143,19 +147,17 @@ if __name__ == "__main__":
     print('----- Define 3D swin -----')
 
     model = SwinTransformer3D(num_classes=4,
-                              embed_dim = 128,
-                               mlp_ratio=4.0,
-                               patch_norm=True,
-                               patch_size=(2,4,4,),
-                               drop_path_rate=0.1, # stochastic depth rate in the paper
-                               num_heads=[4,8,16,32],
-                               depths = [2,2,18,2],
-                               pretrained='https://download.openmmlab.com/mmaction/v1.0/recognition/swin/swin_base_patch4_window7_224.pth',
-                               pretrained2d=True,
-                               window_size=(8,7,7,))
-    
-    device_id = 0
-    device = torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "cpu")
+                              embed_dim=128,
+                              mlp_ratio=4.0,
+                              patch_norm=True,
+                              patch_size=(2,4,4),
+                              drop_path_rate=0.1, # stochastic depth rate in the paper
+                              num_heads=[4,8,16,32],
+                              depths=[2,2,18,2],
+                              pretrained=args.pretrained,
+                              pretrained2d=True,
+                              window_size=(8,7,7))
+    model.init_weights()
     model = model.to(device)
 
     num_epochs = args.num_epochs
@@ -182,7 +184,7 @@ if __name__ == "__main__":
         for i, (inputs_3d, labels) in enumerate(train_loader, 0):
             if i % 50 ==0:
                 logging.info('---- '+str(i)+' th batch -----')
-            inputs_3d, labels = inputs_3d.float().to(device), labels.to(device)
+            inputs_3d, labels = inputs_3d.float().to(device), labels.long().to(device)
             optimizer.zero_grad()
 
             outputs = model(inputs_3d)

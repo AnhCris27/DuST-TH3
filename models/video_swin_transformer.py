@@ -26,7 +26,13 @@ def get_root_logger(log_file=None, log_level=logging.INFO):
     Returns:
         :obj:`logging.Logger`: The root logger.
     """
-    return get_logger(__name__.split('.')[0], log_file, log_level)
+    logger = logging.getLogger('video_swin')
+    if not logger.handlers:
+        logger.setLevel(log_level)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        logger.addHandler(handler)
+    return logger
 
 
 class Mlp(nn.Module):
@@ -594,6 +600,12 @@ class SwinTransformer3D(nn.Module):
         for k in attn_mask_keys:
             del state_dict[k]
 
+        # delete head weights if class dimensions do not match
+        head_keys = [k for k in state_dict.keys() if k.startswith('head.')]
+        for k in head_keys:
+            if k in self.state_dict() and state_dict[k].shape != self.state_dict()[k].shape:
+                del state_dict[k]
+
         state_dict['patch_embed.proj.weight'] = state_dict['patch_embed.proj.weight'].unsqueeze(2).repeat(1,1,self.patch_size[0],1,1) / self.patch_size[0]
 
         # bicubic interpolate relative_position_bias_table if not match
@@ -694,3 +706,5 @@ class SwinTransformer3D(nn.Module):
         """Convert the model into training mode while keep layers freezed."""
         super(SwinTransformer3D, self).train(mode)
         self._freeze_stages()
+        return self
+
